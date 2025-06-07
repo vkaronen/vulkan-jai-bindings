@@ -7,6 +7,7 @@
 // config
 AT_COMPILE_TIME   :: true;
 vulkan_h_location :: "source/vulkan.h";
+GENERATED_FUNC_FILE :: "generated_funcs.jai";
 
 // if the lib path is empty system_library will be used.
 #if OS == .WINDOWS {
@@ -54,9 +55,28 @@ OMIT_LIST :: string.[
     "VK_MAX_EXTENSION_NAME_SIZE",
     "VK_MAX_DESCRIPTION_SIZE",
     // Vulkan 1.3 functions that exist on Linux but are not part of our Windows version:
-    "vkGetPhysicalDeviceSurfaceCapabilities2KHR",
-    "vkGetPhysicalDeviceSurfaceFormats2KHR",
+    //"vkGetPhysicalDeviceSurfaceCapabilities2KHR",
+    //"vkGetPhysicalDeviceSurfaceFormats2KHR",
 ];
+
+LINUX_ARGS :: string.[
+    "-DVK_USE_PLATFORM_ANDROID_KHR",
+    "-DVK_USE_PLATFORM_WAYLAND_KHR",
+    "-DVK_USE_PLATFORM_XCB_KHR",
+    "-DVK_USE_PLATFORM_XLIB_KHR",
+    //"-DVK_USE_PLATFORM_IOS_MVK",
+    //"-DVK_USE_PLATFORM_MACOS_MVK",
+    //"-DVK_USE_PLATFORM_METAL_EXT",
+    //"-DVK_USE_PLATFORM_VI_NN",
+    //"-DVK_USE_PLATFORM_FUCHSIA",
+    //"-DVK_USE_PLATFORM_WIN32_KHR",
+    //"-DVK_USE_PLATFORM_DIRECTFB_EXT",
+    //"-DVK_USE_PLATFORM_XLIB_XRANDR_EXT",
+    //"-DVK_USE_PLATFORM_GGP",
+    //"-DVK_USE_PLATFORM_SCREEN_QNX",
+    //"-DVK_USE_PLATFORM_SCI",
+];
+
 
 generate_bindings :: () -> bool {
     output_filename: string;
@@ -69,8 +89,11 @@ generate_bindings :: () -> bool {
             array_add(*extra_clang_arguments, "-x", "c", "-DWIN32_LEAN_AND_MEAN");
             output_filename  = "generated_windows.jai";
         } else #if OS == .LINUX {
-            array_add(*libnames, "libvulkan.so.1");
+            //array_add(*libnames, "libvulkan.so.1");
             output_filename  = "generated_linux.jai";
+            for LINUX_ARGS {
+                array_add(*extra_clang_arguments, it);
+            }
         } else #if OS == .MACOS {
             // @ToDo
             assert(false);
@@ -81,19 +104,24 @@ generate_bindings :: () -> bool {
         if vulkan_lib_path then array_add(*libpaths, vulkan_lib_path);
 
         array_add(*source_files, vulkan_h_location);
-        array_add(*system_include_paths, GENERATOR_DEFAULT_SYSTEM_INCLUDE_PATH);
+
+        array_add(*extra_clang_arguments, "-DVK_ENABLE_BETA_EXTENSIONS");
 
         generate_library_declarations = false;
         omit_global_declarations = false;
         will_print_bindings = () {
             // Change the library name to be the same on all platforms
             // so that we don't have to generate identical bindings for every platform just because the library name is different.
-            context.generator.libraries[0].name = "libvulkan";
+            //context.generator.libraries[0].name = "libvulkan";
+
+            create_footer();
+
         };
-        footer = VULKAN_FOOTER;
+        //footer = VULKAN_FOOTER;
 
         visitor     = vulkan_visitor;
         generate_compile_time_struct_checks = false;
+        log_unsupported = true;
     }
 
     return generate_bindings(opts, output_filename);
@@ -108,6 +136,44 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         // print("MACRO_DEFINITION removed: %\n", decl.name);
         decl.decl_flags |= .OMIT_FROM_OUTPUT;
         return .STOP;
+    }
+
+    if decl.type {
+        if decl.type.type_of_function {
+            type := decl.type.type_of_function;
+            /*
+            if type.arguments.count > 0 && decl.name == "vkGetInstanceProcAddr" {
+                print("%, %\n", decl.name, decl.output_name);
+                print("First argument: %\n", type.arguments[0].type.type_of_typedef.*);
+
+            }
+            */
+            if type.arguments.count > 0 {
+                if type.arguments[0].type.type_of_typedef {
+                    type_name := type.arguments[0].type.type_of_typedef.name;
+                    if (type_name == "VkDevice" || type_name == "VkQueue" || type_name == "VkCommandBuffer") && decl.name != "vkGetDeviceProcAddr" {
+                        array_add(*device_funcs, decl.name);
+                    } else if (type_name == "VkInstance" || type_name == "VkPhysicalDevice") || decl.name == "vkGetDeviceProcAddr" {
+                        array_add(*instance_funcs, decl.name);
+                    }
+                }
+
+            }
+
+            if decl.kind == .FUNCTION {
+                decl.decl_flags |= .OMIT_FROM_OUTPUT;
+            }
+        }
+        // This is pretty unnecessary.
+        if decl.name == {
+            case "PFN_vkCreateInstance"; #through;
+            case "PFN_vkDebugUtilsMessengerCallbackEXT"; #through;
+            case "PFN_vkDeviceMemoryReportCallbackEXT"; #through;
+            case "PFN_vkEnumerateInstanceExtensionProperties"; #through;
+            case "PFN_vkEnumerateInstanceLayerProperties"; #through;
+            case "PFN_vkEnumerateInstanceVersion";
+                array_add(*loader_funcs, slice(decl.name, 4, decl.name.count - 4));
+        }
     }
 
     // Omit our OMIT_LIST
@@ -175,15 +241,20 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         if enum_value_name == "PHYSICAL_DEVICE_VULKAN_12_PROPERTIES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES";
         if enum_value_name == "PHYSICAL_DEVICE_VULKAN_13_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_3_FEATURES";
         if enum_value_name == "PHYSICAL_DEVICE_VULKAN_13_PROPERTIES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES";
-        if enum_value_name == "PHYSICAL_DEVICE_SHADER_ATOMIC_INT_64_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES";
-        if enum_value_name == "PHYSICAL_DEVICE_SHADER_FLOAT_16_INT_8_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES";
+        if enum_value_name == "PHYSICAL_DEVICE_VULKAN_14_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_4_FEATURES";
+        if enum_value_name == "PHYSICAL_DEVICE_VULKAN_14_PROPERTIES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_4_PROPERTIES";
         if enum_value_name == "PHYSICAL_DEVICE_TEXTURE_COMPRESSION_ASTCHDR_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_TEXTURE_COMPRESSION_ASTC_HDR_FEATURES";
-        if enum_value_name == "PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT_64_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT";
-        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT";
         if enum_value_name == "PHYSICAL_DEVICE_RGB_A_10_X_6_FORMATS_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_RGBA10X6_FORMATS_FEATURES_EXT";
         if enum_value_name == "PHYSICAL_DEVICE_IMAGE_2_D_VIEW_OF_3_D_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_IMAGE_2D_VIEW_OF_3D_FEATURES_EXT";
         if enum_value_name == "PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3_D_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3D_FEATURES_EXT";
 
+	/*
+        if enum_value_name == "PHYSICAL_DEVICE_SHADER_ATOMIC_INT_64_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES";
+        if enum_value_name == "PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT_64_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT";
+        if enum_value_name == "PHYSICAL_DEVICE_SHADER_FLOAT_16_INT_8_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES";
+        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT";
+        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES_KHR" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_KHR";
+        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES";
         if enum_value_name == "VIDEO_DECODE_H_264_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_PROFILE_INFO_KHR";
         if enum_value_name == "VIDEO_DECODE_H_264_CAPABILITIES_KHR" then enum_value_name = "VIDEO_DECODE_H264_CAPABILITIES_KHR";
         if enum_value_name == "VIDEO_DECODE_H_264_SESSION_PARAMETERS_ADD_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR";
@@ -191,6 +262,23 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         if enum_value_name == "VIDEO_DECODE_H_264_PICTURE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_PICTURE_INFO_KHR";
         if enum_value_name == "VIDEO_DECODE_H_264_DPB_SLOT_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR";
         if enum_value_name == "VIDEO_DECODE_H_264_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_PROFILE_INFO_KHR";
+
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_CREATE_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PICTURE_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_DPB_SLOT_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_NALU_SLICE_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_GOP_REMAINING_FRAME_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_LAYER_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_CREATE_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUALITY_LEVEL_PROPERTIES_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_GET_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_FEEDBACK_INFO_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR;
+	VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_INLINE_SESSION_PARAMETERS_INFO_KHR;
         if enum_value_name == "VIDEO_DECODE_H_265_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_PROFILE_INFO_KHR";
         if enum_value_name == "VIDEO_DECODE_H_265_CAPABILITIES_KHR" then enum_value_name = "VIDEO_DECODE_H265_CAPABILITIES_KHR";
         if enum_value_name == "VIDEO_DECODE_H_265_SESSION_PARAMETERS_ADD_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_SESSION_PARAMETERS_ADD_INFO_KHR";
@@ -198,17 +286,18 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         if enum_value_name == "VIDEO_DECODE_H_265_PICTURE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_PICTURE_INFO_KHR";
         if enum_value_name == "VIDEO_DECODE_H_265_DPB_SLOT_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_DPB_SLOT_INFO_KHR";
         if enum_value_name == "VIDEO_DECODE_H_265_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_PROFILE_INFO_KHR";
+	*/
 
 
 
-        enum_value: *Enum.Enumerate;
+        enum_value: *Enum.Enumerate = *struct_type_decl.enumerates[0];
         for * struct_type_decl.enumerates {
             if it.output_name == enum_value_name {
                 enum_value = it;
                 break;
             }
         }
-        assert(enum_value != null, "Could not find % enum value for \"%\"", struct_type_decl.name, enum_value_name);
+        //assert(enum_value != null, "Could not find % enum value for \"%\"", struct_type_decl.name, enum_value_name);
 
         literal := New(Literal);
         literal.literal_kind = .ENUM;
@@ -238,7 +327,7 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
     for i:3..name.count-1 {
         if is_upper(name[i]) {
             is_first_uppercase := !is_upper(name[i-1]);
-            is_end_of_uppercase_word := (i != name.count-1 && !is_upper(name[i+1]));
+            is_end_of_uppercase_word := (i != name.count-1 && !is_upper(name[i+1]) && !is_num(name[i+1]));
             is_bit_count := is_num(name[i-1]) && slice(name, i, 3) == "Bit";
             if (is_first_uppercase || is_end_of_uppercase_word) && !is_bit_count {
                 append(*builder, #char "_");
@@ -247,8 +336,13 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
             }
             append(*builder, name[i]);
         } else if is_num(name[i]) {
-            if !is_num(name[i-1]) {
-                append(*builder, #char "_");
+            if !is_num(name[i-1]) { 
+                if slice(name, i-1, 3) == "H26" {} // Special case for H264 and H265
+                else if slice(name, i-2, 2) == "AV" {} // AV1
+                else if (i >= 4 && slice(name, i-4, 4) == "loat" && name[i] != #char "2") {} // Bfloat and Float, but not float 2 features
+                else if (slice(name, i-4, 4) == "Uint") {}
+                else if (slice(name, i-3, 3) == "Int") {}
+                else append(*builder, #char "_");
             }
             append(*builder, name[i]);
         } else {
@@ -267,6 +361,97 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
 #import "File";
 #import "String";
 #import "Hash_Table";
+
+
+device_funcs: [..]string;
+instance_funcs: [..]string;
+loader_funcs: [..]string;
+
+
+
+create_footer :: () {
+    builder: String_Builder;
+    init_string_builder(*builder);
+
+    write_func_variable_declaration :: (builder: *String_Builder, func_name: string, indent := "") {
+        append(builder, indent);
+        append(builder, func_name);
+        append(builder, ": PFN_");
+        append(builder, func_name);
+        append(builder, ";\n");
+    }
+
+    write_func_variable_assignment_device :: (builder: *String_Builder, func_name: string, prefix := "") {
+        append(builder, prefix);
+        append(builder, func_name);
+        append(builder, " = xx vkGetDeviceProcAddr(device, \"");
+        append(builder, func_name);
+        append(builder, "\");\n");
+    }
+    write_func_variable_assignment_instance :: (builder: *String_Builder, func_name: string, prefix := "") {
+        append(builder, prefix);
+        append(builder, func_name);
+        append(builder, " = xx vkGetInstanceProcAddr(instance, \"");
+        append(builder, func_name);
+        append(builder, "\");\n");
+    }
+    write_func_variable_assignment_loader :: (builder: *String_Builder, func_name: string, prefix := "") {
+        append(builder, prefix);
+        append(builder, func_name);
+        append(builder, " = xx vkGetInstanceProcAddr(null, \"");
+        append(builder, func_name);
+        append(builder, "\");\n");
+    }
+
+    for loader_funcs {
+        write_func_variable_declaration(*builder, it);
+    }
+    for instance_funcs {
+        write_func_variable_declaration(*builder, it);
+    }
+    for device_funcs {
+        write_func_variable_declaration(*builder, it);
+    }
+
+    append(*builder, "\n\nDevice_VTable :: struct {\n");
+
+    for device_funcs {
+        write_func_variable_declaration(*builder, it, "    ");
+    }
+
+    append(*builder, "};\n\nload_proc_addresses :: (device: VkDevice, vtable: *Device_VTable) {\n");
+
+    for device_funcs {
+        write_func_variable_assignment_device(*builder, it, "    vtable.");
+    }
+
+    append(*builder, "}\n\nload_proc_addresses :: (device: VkDevice) {\n");
+
+    for device_funcs {
+        write_func_variable_assignment_device(*builder, it, "    ");
+    }
+
+    append(*builder, "}\n\nload_proc_addresses :: (instance: VkInstance) {\n");
+
+    for instance_funcs {
+        write_func_variable_assignment_instance(*builder, it, "    ");
+    }
+    for device_funcs {
+        write_func_variable_assignment_instance(*builder, it, "    ");
+    }
+
+    append(*builder, "}\n\nload_proc_addresses :: (vk_get_instance_proc_addr: *void) {\n    vkGetInstanceProcAddr = xx vk_get_instance_proc_addr;\n\n");
+
+    for loader_funcs {
+        write_func_variable_assignment_loader(*builder, it, "    ");
+    }
+
+    append(*builder, "}\n");
+
+
+    success := write_entire_file(GENERATED_FUNC_FILE, *builder);
+}
+
 
 VULKAN_FOOTER :: #string END
 #scope_file
