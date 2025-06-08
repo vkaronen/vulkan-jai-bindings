@@ -1,19 +1,84 @@
 // MIT License - Copyright (c) 2022 Hamad Almamari
+// Modified by Ryan Capote for Vulkan 1.3
+// Modified by Veikka Karonen for Vulkan 1.4
+
 // Tested with vulkan 1.0 and 1.2
 // You can use this file to generate any version of vulkan bindings.
-// You only need to set the vulkan.h and vulkan lib paths.
-// Modified by Ryan Capote for Vulkan 1.3
+// You only need to set the vulkan.h path, and specify different defines if the default for your OS doesn't work.
 
 // config
 AT_COMPILE_TIME   :: true;
 vulkan_h_location :: "source/vulkan.h";
-GENERATED_FUNC_FILE :: "generated_funcs.jai";
 
-// if the lib path is empty system_library will be used.
+
+// These are all the defines used in vulkan.h
+// This set of defines isn't actually used anywhere, but you could if you provided all of the required system headers.
+// (The generator will yell at you if you don't have them)
+ALL_ARGS :: string.[
+    "-DVK_ENABLE_BETA_EXTENSIONS",
+    "-DVK_USE_PLATFORM_ANDROID_KHR",
+    "-DVK_USE_PLATFORM_WAYLAND_KHR",
+    "-DVK_USE_PLATFORM_XCB_KHR",
+    "-DVK_USE_PLATFORM_XLIB_KHR",
+    "-DVK_USE_PLATFORM_IOS_MVK",
+    "-DVK_USE_PLATFORM_MACOS_MVK",
+    "-DVK_USE_PLATFORM_METAL_EXT",
+    "-DVK_USE_PLATFORM_VI_NN",
+    "-DVK_USE_PLATFORM_FUCHSIA",
+    "-DVK_USE_PLATFORM_WIN32_KHR",
+    "-DVK_USE_PLATFORM_DIRECTFB_EXT",
+    "-DVK_USE_PLATFORM_XLIB_XRANDR_EXT",
+    "-DVK_USE_PLATFORM_GGP",
+    "-DVK_USE_PLATFORM_SCREEN_QNX",
+    "-DVK_USE_PLATFORM_SCI",
+];
+
+/*
+    These are the default args selected based on your OS. They all enable beta extensions, which only means that
+    structs and function pointers are generated. Generating without it defined is not possible currently, because
+    some structs need to set their sType field to a value that won't be generated without the beta define.
+
+    Other option would be to have the generator leave the sType as some default value, but then the user can't be
+    certain that their sType is always correctly initialized.
+*/
+
+LINUX_ARGS :: string.[
+    "-DVK_ENABLE_BETA_EXTENSIONS",
+    "-DVK_USE_PLATFORM_ANDROID_KHR",
+    "-DVK_USE_PLATFORM_WAYLAND_KHR",
+    "-DVK_USE_PLATFORM_XCB_KHR",
+    "-DVK_USE_PLATFORM_XLIB_KHR",
+];
+
+// @Untested
+WINDOWS_ARGS :: string.[
+    "-x",
+    "c",
+    "-DWIN32_LEAN_AND_MEAN",
+    "-DVK_ENABLE_BETA_EXTENSIONS",
+    "-DVK_USE_PLATFORM_WIN32_KHR",
+];
+
+// @Untested
+MACOS_ARGS :: string.[
+    "-DVK_ENABLE_BETA_EXTENSIONS",
+    "-DVK_USE_PLATFORM_IOS_MVK",
+    "-DVK_USE_PLATFORM_MACOS_MVK",
+    "-DVK_USE_PLATFORM_METAL_EXT",
+];
+
 #if OS == .WINDOWS {
-    vulkan_lib_path :: "win";
-}  else {
-    vulkan_lib_path :: "";
+    DEFAULT_ARGS :: WINDOWS_ARGS;
+    GENERATED_FILE :: "generated_windows.jai";
+    GENERATED_FUNC_FILE :: "generated_funcs_windows.jai";
+} else #if OS == .LINUX {
+    DEFAULT_ARGS :: LINUX_ARGS;
+    GENERATED_FILE :: "generated_linux.jai";
+    GENERATED_FUNC_FILE :: "generated_funcs_linux.jai";
+} else #if OS == .MACOS {
+    DEFAULT_ARGS :: MACOS_ARGS;
+    GENERATED_FILE :: "generated_macos.jai";
+    GENERATED_FUNC_FILE :: "generated_funcs_macos.jai";
 }
 
 
@@ -54,27 +119,6 @@ OMIT_LIST :: string.[
     "VK_MAX_MEMORY_HEAPS",
     "VK_MAX_EXTENSION_NAME_SIZE",
     "VK_MAX_DESCRIPTION_SIZE",
-    // Vulkan 1.3 functions that exist on Linux but are not part of our Windows version:
-    //"vkGetPhysicalDeviceSurfaceCapabilities2KHR",
-    //"vkGetPhysicalDeviceSurfaceFormats2KHR",
-];
-
-LINUX_ARGS :: string.[
-    "-DVK_USE_PLATFORM_ANDROID_KHR",
-    "-DVK_USE_PLATFORM_WAYLAND_KHR",
-    "-DVK_USE_PLATFORM_XCB_KHR",
-    "-DVK_USE_PLATFORM_XLIB_KHR",
-    //"-DVK_USE_PLATFORM_IOS_MVK",
-    //"-DVK_USE_PLATFORM_MACOS_MVK",
-    //"-DVK_USE_PLATFORM_METAL_EXT",
-    //"-DVK_USE_PLATFORM_VI_NN",
-    //"-DVK_USE_PLATFORM_FUCHSIA",
-    //"-DVK_USE_PLATFORM_WIN32_KHR",
-    //"-DVK_USE_PLATFORM_DIRECTFB_EXT",
-    //"-DVK_USE_PLATFORM_XLIB_XRANDR_EXT",
-    //"-DVK_USE_PLATFORM_GGP",
-    //"-DVK_USE_PLATFORM_SCREEN_QNX",
-    //"-DVK_USE_PLATFORM_SCI",
 ];
 
 
@@ -84,40 +128,17 @@ generate_bindings :: () -> bool {
     {
         using opts;
 
-        #if OS == .WINDOWS {
-            array_add(*libnames, "vulkan-1");
-            array_add(*extra_clang_arguments, "-x", "c", "-DWIN32_LEAN_AND_MEAN");
-            output_filename  = "generated_windows.jai";
-        } else #if OS == .LINUX {
-            //array_add(*libnames, "libvulkan.so.1");
-            output_filename  = "generated_linux.jai";
-            for LINUX_ARGS {
-                array_add(*extra_clang_arguments, it);
-            }
-        } else #if OS == .MACOS {
-            // @ToDo
-            assert(false);
-        } else {
-            assert(false);
-        }
+        output_filename = GENERATED_FILE;
 
-        if vulkan_lib_path then array_add(*libpaths, vulkan_lib_path);
+        for DEFAULT_ARGS {
+            array_add(*extra_clang_arguments, it);
+        }
 
         array_add(*source_files, vulkan_h_location);
 
-        array_add(*extra_clang_arguments, "-DVK_ENABLE_BETA_EXTENSIONS");
-
         generate_library_declarations = false;
         omit_global_declarations = false;
-        will_print_bindings = () {
-            // Change the library name to be the same on all platforms
-            // so that we don't have to generate identical bindings for every platform just because the library name is different.
-            //context.generator.libraries[0].name = "libvulkan";
-
-            create_footer();
-
-        };
-        //footer = VULKAN_FOOTER;
+        will_print_bindings = generate_funcs;
 
         visitor     = vulkan_visitor;
         generate_compile_time_struct_checks = false;
@@ -141,13 +162,7 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
     if decl.type {
         if decl.type.type_of_function {
             type := decl.type.type_of_function;
-            /*
-            if type.arguments.count > 0 && decl.name == "vkGetInstanceProcAddr" {
-                print("%, %\n", decl.name, decl.output_name);
-                print("First argument: %\n", type.arguments[0].type.type_of_typedef.*);
 
-            }
-            */
             if type.arguments.count > 0 {
                 if type.arguments[0].type.type_of_typedef {
                     type_name := type.arguments[0].type.type_of_typedef.name;
@@ -369,7 +384,7 @@ loader_funcs: [..]string;
 
 
 
-create_footer :: () {
+generate_funcs :: () {
     builder: String_Builder;
     init_string_builder(*builder);
 
@@ -451,16 +466,3 @@ create_footer :: () {
 
     success := write_entire_file(GENERATED_FUNC_FILE, *builder);
 }
-
-
-VULKAN_FOOTER :: #string END
-#scope_file
-
-#if OS == .WINDOWS {
-    libvulkan :: #library "win/vulkan-1";
-} else #if OS == .LINUX {
-    libvulkan :: #system_library "libvulkan.so.1";
-} else {
-    #assert(false);
-}
-END

@@ -2,9 +2,7 @@
 
 Vulkan API bindings.
 
-WARNING: These Vulkan bindings are mostly unused and untested.
-This code is here as a starting point for anyone who wants to use Vulkan, but you can expect to do a significant
-amount of work to get things going well.
+WARNING: These Vulkan bindings are mostly unused and untested for now.
 
 */
 
@@ -75,18 +73,9 @@ VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_SPEC_VERSION :: VK_STD_VULKAN_VIDEO_CODEC_
 
 
 
-#load "generated_funcs.jai";
 
-#if OS == .WINDOWS {
-    #load "generated_windows.jai";
-    #load "windows_extras.jai";
-
-    #scope_file
-    libvulkan :: #library "win/vulkan-1";
-} else #if OS == .LINUX {
-    #load "generated_linux.jai";
-    libvulkan :: #system_library "libvulkan";
-}
+#load GENERATED_FUNC_FILE
+#load GENERATED_FILE
 
 #scope_module
 
