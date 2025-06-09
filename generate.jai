@@ -159,7 +159,16 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         return .STOP;
     }
 
+
+    // Is this guaranteed?
     if decl.type {
+
+        // There is a risk here if for example 'Window' is also used in some other header unrelated to Xlib.
+        // But currently this works fine, there are only three lines total where these types appear.
+        search_and_replace_type_by_name(decl.type, "Display", "Xlib_Display");
+        search_and_replace_type_by_name(decl.type, "Window", "Xlib_Window");
+        search_and_replace_type_by_name(decl.type, "VisualID", "Xlib_VisualID");
+
         if decl.type.type_of_function {
             type := decl.type.type_of_function;
 
@@ -312,7 +321,7 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
                 break;
             }
         }
-        //assert(enum_value != null, "Could not find % enum value for \"%\"", struct_type_decl.name, enum_value_name);
+        assert(enum_value != null, "Could not find % enum value for \"%\"", struct_type_decl.name, enum_value_name);
 
         literal := New(Literal);
         literal.literal_kind = .ENUM;
@@ -368,14 +377,28 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
     return builder_to_string(*builder);
 }
 
-#scope_file
-#import "Basic";
-#import "Compiler";
-#import "Check";
-#import "Bindings_Generator";
-#import "File";
-#import "String";
-#import "Hash_Table";
+
+// Replaces typedefs with better names (example: Xlib uses a type called 'Display', we change the output_name to XlibDisplay)
+search_and_replace_type_by_name :: (declaration_type: *CType, search: string, replace: string) {
+    type := declaration_type;
+
+    while true {
+        if type.pointer_to {
+            type = type.pointer_to;
+        } else if type.type_of_typedef {
+            if type.type_of_typedef.name == search then type.type_of_typedef.output_name = replace;
+            break;
+        } else if type.type_of_function {
+            // Arguments are declarations and should be passed to this function separately
+            if type.type_of_function.return_type then type = type.type_of_function.return_type;
+        } else if type.array_element_type {
+            type = type.array_element_type;
+        } else {
+            // Number or struct (again struct fields are declarations and are passed here separately)
+            break;
+        }
+    }
+}
 
 
 device_funcs: [..]string;
@@ -434,19 +457,19 @@ generate_funcs :: () {
         write_func_variable_declaration(*builder, it, "    ");
     }
 
-    append(*builder, "};\n\nload_proc_addresses :: (device: VkDevice, vtable: *Device_VTable) {\n");
+    append(*builder, "};\n\nload_proc_addresses_vtable :: (device: VkDevice, vtable: *Device_VTable) {\n");
 
     for device_funcs {
         write_func_variable_assignment_device(*builder, it, "    vtable.");
     }
 
-    append(*builder, "}\n\nload_proc_addresses :: (device: VkDevice) {\n");
+    append(*builder, "}\n\nload_device_proc_addresses :: (device: VkDevice) {\n");
 
     for device_funcs {
         write_func_variable_assignment_device(*builder, it, "    ");
     }
 
-    append(*builder, "}\n\nload_proc_addresses :: (instance: VkInstance) {\n");
+    append(*builder, "}\n\nload_instance_proc_addresses :: (instance: VkInstance) {\n");
 
     for instance_funcs {
         write_func_variable_assignment_instance(*builder, it, "    ");
@@ -455,7 +478,7 @@ generate_funcs :: () {
         write_func_variable_assignment_instance(*builder, it, "    ");
     }
 
-    append(*builder, "}\n\nload_proc_addresses :: (vk_get_instance_proc_addr: *void) {\n    vkGetInstanceProcAddr = xx vk_get_instance_proc_addr;\n\n");
+    append(*builder, "}\n\nload_global_proc_addresses :: (vk_get_instance_proc_addr: *void) {\n    vkGetInstanceProcAddr = xx vk_get_instance_proc_addr;\n\n");
 
     for loader_funcs {
         write_func_variable_assignment_loader(*builder, it, "    ");
@@ -466,3 +489,12 @@ generate_funcs :: () {
 
     success := write_entire_file(GENERATED_FUNC_FILE, *builder);
 }
+
+#scope_file
+#import "Basic";
+#import "Compiler";
+#import "Check";
+#import "Bindings_Generator";
+#import "File";
+#import "String";
+#import "Hash_Table";

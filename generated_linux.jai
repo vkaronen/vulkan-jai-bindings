@@ -24019,12 +24019,12 @@ VkXlibSurfaceCreateInfoKHR :: struct {
     sType:  VkStructureType = .XLIB_SURFACE_CREATE_INFO_KHR;
     pNext:  *void;
     flags:  VkXlibSurfaceCreateFlagsKHR;
-    dpy:    *Display;
-    window: Window;
+    dpy:    *Xlib_Display;
+    window: Xlib_Window;
 }
 
 PFN_vkCreateXlibSurfaceKHR :: #type (instance: VkInstance, pCreateInfo: *VkXlibSurfaceCreateInfoKHR, pAllocator: *VkAllocationCallbacks, pSurface: *VkSurfaceKHR) -> VkResult #c_call;
-PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR :: #type (physicalDevice: VkPhysicalDevice, queueFamilyIndex: u32, dpy: *Display, visualID: VisualID) -> VkBool32 #c_call;
+PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR :: #type (physicalDevice: VkPhysicalDevice, queueFamilyIndex: u32, dpy: *Xlib_Display, visualID: Xlib_VisualID) -> VkBool32 #c_call;
 
 VkPhysicalDevicePortabilitySubsetFeaturesKHR :: struct {
     sType:                                  VkStructureType = .PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;

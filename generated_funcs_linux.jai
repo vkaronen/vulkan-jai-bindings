@@ -1296,7 +1296,7 @@ Device_VTable :: struct {
     vkCmdDispatchGraphIndirectCountAMDX: PFN_vkCmdDispatchGraphIndirectCountAMDX;
 };
 
-load_proc_addresses :: (device: VkDevice, vtable: *Device_VTable) {
+load_proc_addresses_vtable :: (device: VkDevice, vtable: *Device_VTable) {
     vtable.vkDestroyDevice = xx vkGetDeviceProcAddr(device, "vkDestroyDevice");
     vtable.vkGetDeviceQueue = xx vkGetDeviceProcAddr(device, "vkGetDeviceQueue");
     vtable.vkQueueSubmit = xx vkGetDeviceProcAddr(device, "vkQueueSubmit");
@@ -1897,7 +1897,7 @@ load_proc_addresses :: (device: VkDevice, vtable: *Device_VTable) {
     vtable.vkCmdDispatchGraphIndirectCountAMDX = xx vkGetDeviceProcAddr(device, "vkCmdDispatchGraphIndirectCountAMDX");
 }
 
-load_proc_addresses :: (device: VkDevice) {
+load_device_proc_addresses :: (device: VkDevice) {
     vkDestroyDevice = xx vkGetDeviceProcAddr(device, "vkDestroyDevice");
     vkGetDeviceQueue = xx vkGetDeviceProcAddr(device, "vkGetDeviceQueue");
     vkQueueSubmit = xx vkGetDeviceProcAddr(device, "vkQueueSubmit");
@@ -2498,7 +2498,7 @@ load_proc_addresses :: (device: VkDevice) {
     vkCmdDispatchGraphIndirectCountAMDX = xx vkGetDeviceProcAddr(device, "vkCmdDispatchGraphIndirectCountAMDX");
 }
 
-load_proc_addresses :: (instance: VkInstance) {
+load_instance_proc_addresses :: (instance: VkInstance) {
     vkDestroyInstance = xx vkGetInstanceProcAddr(instance, "vkDestroyInstance");
     vkEnumeratePhysicalDevices = xx vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDevices");
     vkGetPhysicalDeviceFeatures = xx vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures");
@@ -3190,7 +3190,7 @@ load_proc_addresses :: (instance: VkInstance) {
     vkCmdDispatchGraphIndirectCountAMDX = xx vkGetInstanceProcAddr(instance, "vkCmdDispatchGraphIndirectCountAMDX");
 }
 
-load_proc_addresses :: (vk_get_instance_proc_addr: *void) {
+load_global_proc_addresses :: (vk_get_instance_proc_addr: *void) {
     vkGetInstanceProcAddr = xx vk_get_instance_proc_addr;
 
     vkCreateInstance = xx vkGetInstanceProcAddr(null, "vkCreateInstance");

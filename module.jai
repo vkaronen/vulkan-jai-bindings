@@ -34,14 +34,14 @@ VK_VERSION_MAJOR :: (version: u32) -> u32 { return version >> 22; }
 VK_VERSION_MINOR :: (version: u32) -> u32 { return (version >> 12) & 0x3ff; }
 VK_VERSION_PATCH :: (version: u32) -> u32 { return version & 0xfff; }
 
-VK_HEADER_VERSION :: 313;
+//VK_HEADER_VERSION :: 313;
 
-VK_API_VERSION_1_0 :: #run VK_API_MAKE_VERSION(0, 1, 0, 0);
-VK_API_VERSION_1_1 :: #run VK_API_MAKE_VERSION(0, 1, 1, 0);
-VK_API_VERSION_1_2 :: #run VK_API_MAKE_VERSION(0, 1, 2, 0);
-VK_API_VERSION_1_3 :: #run VK_API_MAKE_VERSION(0, 1, 3, 0);
-VK_API_VERSION_1_4 :: #run VK_API_MAKE_VERSION(0, 1, 4, 0);
-VK_API_VERSION_COMPLETE :: #run VK_API_MAKE_VERSION(0, 1, 4, VK_HEADER_VERSION);
+VK_API_VERSION_1_0 :: #run VK_MAKE_API_VERSION(0, 1, 0, 0);
+VK_API_VERSION_1_1 :: #run VK_MAKE_API_VERSION(0, 1, 1, 0);
+VK_API_VERSION_1_2 :: #run VK_MAKE_API_VERSION(0, 1, 2, 0);
+VK_API_VERSION_1_3 :: #run VK_MAKE_API_VERSION(0, 1, 3, 0);
+VK_API_VERSION_1_4 :: #run VK_MAKE_API_VERSION(0, 1, 4, 0);
+VK_API_VERSION_COMPLETE :: #run VK_MAKE_API_VERSION(0, 1, 4, VK_HEADER_VERSION);
 
 // These are the new versions:
 VK_MAKE_API_VERSION :: (variant: u32, major: u32, minor: u32, patch: u32) -> u32 {
@@ -53,7 +53,7 @@ VK_API_VERSION_MAJOR   :: (version: u32) -> u32 { return (version >> 22) & 0x7f;
 VK_API_VERSION_MINOR   :: (version: u32) -> u32 { return (version >> 12) & 0x3ff; }
 VK_API_VERSION_PATCH   :: (version: u32) -> u32 { return version & 0xfff; }
 
-VK_MAKE_VIDEO_STD_VERSION :: (major, minor, patch: u32) -> u32 {
+VK_MAKE_VIDEO_STD_VERSION :: (major: u32, minor: u32, patch: u32) -> u32 {
     return (major << 22) | (minor << 12) | patch;
 }
 VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_1_0_0 :: #run VK_MAKE_VIDEO_STD_VERSION(1, 0, 0);
@@ -72,12 +72,30 @@ VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_API_VERSION_1_0_0 :: #run VK_MAKE_VIDEO_ST
 VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_SPEC_VERSION :: VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_API_VERSION_1_0_0;
 
 
+#if OS == .WINDOWS {
+    #load "generated_windows.jai";
+    #load "generated_funcs_windows.jai";
+} else #if OS == .LINUX {
+    #load "generated_linux.jai";
+    #load "generated_funcs_linux.jai";
+} else #if OS == .MACOS {
+    #load "generated_macos.jai";
+    #load "generated_funcs_macos.jai";
+}
 
 
-#load GENERATED_FUNC_FILE
-#load GENERATED_FILE
 
+// Various types the bindings generator couldn't simplify automatically.
+// They are buried deep in the system includes.
+xcb_connection_t :: struct {};
+xcb_window_t :: u32;
+xcb_visualid_t :: u32;
+
+Xlib_Display :: struct {};
+Xlib_Window :: u32;
+Xlib_VisualID :: u32;
+
+// @Todo: I think this is related to windows?
 #scope_module
 
 size_t  :: u64;
-
