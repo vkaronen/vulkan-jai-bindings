@@ -12,7 +12,6 @@ vkGetPhysicalDeviceImageFormatProperties: PFN_vkGetPhysicalDeviceImageFormatProp
 vkGetPhysicalDeviceProperties: PFN_vkGetPhysicalDeviceProperties;
 vkGetPhysicalDeviceQueueFamilyProperties: PFN_vkGetPhysicalDeviceQueueFamilyProperties;
 vkGetPhysicalDeviceMemoryProperties: PFN_vkGetPhysicalDeviceMemoryProperties;
-vkGetInstanceProcAddr: PFN_vkGetInstanceProcAddr;
 vkGetDeviceProcAddr: PFN_vkGetDeviceProcAddr;
 vkCreateDevice: PFN_vkCreateDevice;
 vkEnumerateDeviceExtensionProperties: PFN_vkEnumerateDeviceExtensionProperties;
@@ -2507,7 +2506,6 @@ load_instance_proc_addresses :: (instance: VkInstance) {
     vkGetPhysicalDeviceProperties = xx vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties");
     vkGetPhysicalDeviceQueueFamilyProperties = xx vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceQueueFamilyProperties");
     vkGetPhysicalDeviceMemoryProperties = xx vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceMemoryProperties");
-    vkGetInstanceProcAddr = xx vkGetInstanceProcAddr(instance, "vkGetInstanceProcAddr");
     vkGetDeviceProcAddr = xx vkGetInstanceProcAddr(instance, "vkGetDeviceProcAddr");
     vkCreateDevice = xx vkGetInstanceProcAddr(instance, "vkCreateDevice");
     vkEnumerateDeviceExtensionProperties = xx vkGetInstanceProcAddr(instance, "vkEnumerateDeviceExtensionProperties");
@@ -3190,8 +3188,7 @@ load_instance_proc_addresses :: (instance: VkInstance) {
     vkCmdDispatchGraphIndirectCountAMDX = xx vkGetInstanceProcAddr(instance, "vkCmdDispatchGraphIndirectCountAMDX");
 }
 
-load_global_proc_addresses :: (vk_get_instance_proc_addr: *void) {
-    vkGetInstanceProcAddr = xx vk_get_instance_proc_addr;
+load_global_proc_addresses :: () {
 
     vkCreateInstance = xx vkGetInstanceProcAddr(null, "vkCreateInstance");
     vkEnumerateInstanceExtensionProperties = xx vkGetInstanceProcAddr(null, "vkEnumerateInstanceExtensionProperties");

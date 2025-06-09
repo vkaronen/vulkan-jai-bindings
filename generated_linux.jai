@@ -20742,7 +20742,7 @@ VkPhysicalDeviceRasterizationOrderAttachmentAccessFeaturesEXT :: struct {
 VkPhysicalDeviceRasterizationOrderAttachmentAccessFeaturesARM :: VkPhysicalDeviceRasterizationOrderAttachmentAccessFeaturesEXT;
 
 VkPhysicalDeviceRGBA10X6FormatsFeaturesEXT :: struct {
-    sType:                             VkStructureType = .APPLICATION_INFO;
+    sType:                             VkStructureType = .PHYSICAL_DEVICE_RGBA10X6_FORMATS_FEATURES_EXT;
     pNext:                             *void;
     formatRgba10x6WithoutYCbCrSampler: VkBool32;
 }
@@ -24019,12 +24019,12 @@ VkXlibSurfaceCreateInfoKHR :: struct {
     sType:  VkStructureType = .XLIB_SURFACE_CREATE_INFO_KHR;
     pNext:  *void;
     flags:  VkXlibSurfaceCreateFlagsKHR;
-    dpy:    *Xlib_Display;
-    window: Xlib_Window;
+    dpy:    *Display;
+    window: Window;
 }
 
 PFN_vkCreateXlibSurfaceKHR :: #type (instance: VkInstance, pCreateInfo: *VkXlibSurfaceCreateInfoKHR, pAllocator: *VkAllocationCallbacks, pSurface: *VkSurfaceKHR) -> VkResult #c_call;
-PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR :: #type (physicalDevice: VkPhysicalDevice, queueFamilyIndex: u32, dpy: *Xlib_Display, visualID: Xlib_VisualID) -> VkBool32 #c_call;
+PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR :: #type (physicalDevice: VkPhysicalDevice, queueFamilyIndex: u32, dpy: *Display, visualID: VisualID) -> VkBool32 #c_call;
 
 VkPhysicalDevicePortabilitySubsetFeaturesKHR :: struct {
     sType:                                  VkStructureType = .PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;

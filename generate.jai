@@ -163,12 +163,6 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
     // Is this guaranteed?
     if decl.type {
 
-        // There is a risk here if for example 'Window' is also used in some other header unrelated to Xlib.
-        // But currently this works fine, there are only three lines total where these types appear.
-        search_and_replace_type_by_name(decl.type, "Display", "Xlib_Display");
-        search_and_replace_type_by_name(decl.type, "Window", "Xlib_Window");
-        search_and_replace_type_by_name(decl.type, "VisualID", "Xlib_VisualID");
-
         if decl.type.type_of_function {
             type := decl.type.type_of_function;
 
@@ -273,47 +267,6 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         if enum_value_name == "PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3_D_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3D_FEATURES_EXT";
         if enum_value_name == "D_3_D_12_FENCE_SUBMIT_INFO_KHR" then enum_value_name = "D3D12_FENCE_SUBMIT_INFO_KHR";
 
-	/*
-        if enum_value_name == "PHYSICAL_DEVICE_SHADER_ATOMIC_INT_64_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES";
-        if enum_value_name == "PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT_64_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT";
-        if enum_value_name == "PHYSICAL_DEVICE_SHADER_FLOAT_16_INT_8_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES";
-        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT";
-        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES_KHR" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_KHR";
-        if enum_value_name == "PHYSICAL_DEVICE_INDEX_TYPE_UINT_8_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES";
-        if enum_value_name == "VIDEO_DECODE_H_264_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_PROFILE_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_264_CAPABILITIES_KHR" then enum_value_name = "VIDEO_DECODE_H264_CAPABILITIES_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_264_SESSION_PARAMETERS_ADD_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_264_SESSION_PARAMETERS_CREATE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_SESSION_PARAMETERS_CREATE_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_264_PICTURE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_PICTURE_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_264_DPB_SLOT_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_264_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H264_PROFILE_INFO_KHR";
-
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_CREATE_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PICTURE_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_DPB_SLOT_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_NALU_SLICE_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_GOP_REMAINING_FRAME_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_LAYER_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_CREATE_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUALITY_LEVEL_PROPERTIES_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_GET_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_FEEDBACK_INFO_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR;
-	VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_INLINE_SESSION_PARAMETERS_INFO_KHR;
-        if enum_value_name == "VIDEO_DECODE_H_265_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_PROFILE_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_265_CAPABILITIES_KHR" then enum_value_name = "VIDEO_DECODE_H265_CAPABILITIES_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_265_SESSION_PARAMETERS_ADD_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_SESSION_PARAMETERS_ADD_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_265_SESSION_PARAMETERS_CREATE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_SESSION_PARAMETERS_CREATE_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_265_PICTURE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_PICTURE_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_265_DPB_SLOT_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_DPB_SLOT_INFO_KHR";
-        if enum_value_name == "VIDEO_DECODE_H_265_PROFILE_INFO_KHR" then enum_value_name = "VIDEO_DECODE_H265_PROFILE_INFO_KHR";
-	*/
-
-
 
         enum_value: *Enum.Enumerate;
         for * struct_type_decl.enumerates {
@@ -363,6 +316,8 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
             append(*builder, name[i]);
         } else if is_num(name[i]) {
             if !is_num(name[i-1]) {
+
+                // Here we check a bunch of special cases where a number should be after a letter without an underscore.
                 skip_underscore := false;
                 skip_underscore |= slice(name, i-1, 3) == "H26"; // Special case for H264 and H265
                 skip_underscore |= slice(name, i-2, 2) == "AV"; // AV1
@@ -383,29 +338,6 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
     }
 
     return builder_to_string(*builder);
-}
-
-
-// Replaces typedefs with better names (example: Xlib uses a type called 'Display', we change the output_name to XlibDisplay)
-search_and_replace_type_by_name :: (declaration_type: *CType, search: string, replace: string) {
-    type := declaration_type;
-
-    while true {
-        if type.pointer_to {
-            type = type.pointer_to;
-        } else if type.type_of_typedef {
-            if type.type_of_typedef.name == search then type.type_of_typedef.output_name = replace;
-            break;
-        } else if type.type_of_function {
-            // Arguments are declarations and should be passed to this function separately
-            if type.type_of_function.return_type then type = type.type_of_function.return_type;
-        } else if type.array_element_type {
-            type = type.array_element_type;
-        } else {
-            // Number or struct (again struct fields are declarations and are passed here separately)
-            break;
-        }
-    }
 }
 
 
