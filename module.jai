@@ -75,6 +75,10 @@ VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_SPEC_VERSION :: VK_STD_VULKAN_VIDEO_CODEC_
 #if OS == .WINDOWS {
     #load "generated_windows.jai";
     #load "generated_funcs_windows.jai";
+    #scope_module;
+    #import "Windows";
+    libvulkan :: #system_library "vulkan-1";
+
 } else #if OS == .LINUX {
     #load "generated_linux.jai";
     #load "generated_funcs_linux.jai";
@@ -83,7 +87,7 @@ VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_SPEC_VERSION :: VK_STD_VULKAN_VIDEO_CODEC_
     #load "generated_funcs_macos.jai";
 }
 
-
+vkGetInstanceProcAddr :: (instance: VkInstance, pName: *u8) -> PFN_vkVoidFunction #foreign libvulkan;
 
 // Various types the bindings generator couldn't simplify automatically.
 // They are buried deep in the system includes.
@@ -98,4 +102,4 @@ Xlib_VisualID :: u32;
 // @Todo: I think this is related to windows?
 #scope_module
 
-size_t  :: u64;
+//size_t  :: u64;

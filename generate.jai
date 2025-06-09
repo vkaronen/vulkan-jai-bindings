@@ -177,7 +177,7 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
                     type_name := type.arguments[0].type.type_of_typedef.name;
                     if (type_name == "VkDevice" || type_name == "VkQueue" || type_name == "VkCommandBuffer") && decl.name != "vkGetDeviceProcAddr" {
                         array_add(*device_funcs, decl.name);
-                    } else if (type_name == "VkInstance" || type_name == "VkPhysicalDevice") || decl.name == "vkGetDeviceProcAddr" {
+                    } else if ((type_name == "VkInstance" || type_name == "VkPhysicalDevice") || decl.name == "vkGetDeviceProcAddr") && decl.name != "vkGetInstanceProcAddr" {
                         array_add(*instance_funcs, decl.name);
                     }
                 }
@@ -268,9 +268,10 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
         if enum_value_name == "PHYSICAL_DEVICE_VULKAN_14_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_4_FEATURES";
         if enum_value_name == "PHYSICAL_DEVICE_VULKAN_14_PROPERTIES" then enum_value_name = "PHYSICAL_DEVICE_VULKAN_1_4_PROPERTIES";
         if enum_value_name == "PHYSICAL_DEVICE_TEXTURE_COMPRESSION_ASTCHDR_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_TEXTURE_COMPRESSION_ASTC_HDR_FEATURES";
-        if enum_value_name == "PHYSICAL_DEVICE_RGB_A_10_X_6_FORMATS_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_RGBA10X6_FORMATS_FEATURES_EXT";
+        if enum_value_name == "PHYSICAL_DEVICE_RGBA_10_X_6_FORMATS_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_RGBA10X6_FORMATS_FEATURES_EXT";
         if enum_value_name == "PHYSICAL_DEVICE_IMAGE_2_D_VIEW_OF_3_D_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_IMAGE_2D_VIEW_OF_3D_FEATURES_EXT";
         if enum_value_name == "PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3_D_FEATURES_EXT" then enum_value_name = "PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3D_FEATURES_EXT";
+        if enum_value_name == "D_3_D_12_FENCE_SUBMIT_INFO_KHR" then enum_value_name = "D3D12_FENCE_SUBMIT_INFO_KHR";
 
 	/*
         if enum_value_name == "PHYSICAL_DEVICE_SHADER_ATOMIC_INT_64_FEATURES" then enum_value_name = "PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES";
@@ -314,7 +315,7 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
 
 
 
-        enum_value: *Enum.Enumerate = *struct_type_decl.enumerates[0];
+        enum_value: *Enum.Enumerate;
         for * struct_type_decl.enumerates {
             if it.output_name == enum_value_name {
                 enum_value = it;
@@ -345,6 +346,7 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
         if byte >= #char "0" && byte <= #char "9" return true;
         return false;
     }
+    
 
     builder: String_Builder;
     append(*builder, name[2]);
@@ -360,13 +362,19 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
             }
             append(*builder, name[i]);
         } else if is_num(name[i]) {
-            if !is_num(name[i-1]) { 
-                if slice(name, i-1, 3) == "H26" {} // Special case for H264 and H265
-                else if slice(name, i-2, 2) == "AV" {} // AV1
-                else if (i >= 4 && slice(name, i-4, 4) == "loat" && name[i] != #char "2") {} // Bfloat and Float, but not float 2 features
-                else if (slice(name, i-4, 4) == "Uint") {}
-                else if (slice(name, i-3, 3) == "Int") {}
-                else append(*builder, #char "_");
+            if !is_num(name[i-1]) {
+                skip_underscore := false;
+                skip_underscore |= slice(name, i-1, 3) == "H26"; // Special case for H264 and H265
+                skip_underscore |= slice(name, i-2, 2) == "AV"; // AV1
+                if i >= 4 {
+                    skip_underscore |= slice(name, i-4, 4) == "loat" && name[i] != "2"; // Bfloat and Float, but not float 2 features
+                    skip_underscore |= slice(name, i-4, 4) == "Uint";
+                    skip_underscore |= slice(name, i-3, 5) == "Win32";
+                }
+                skip_underscore |= slice(name, i-3, 3) == "Int";
+                if !skip_underscore {
+                    append(*builder, #char "_");
+                }
             }
             append(*builder, name[i]);
         } else {
@@ -478,7 +486,7 @@ generate_funcs :: () {
         write_func_variable_assignment_instance(*builder, it, "    ");
     }
 
-    append(*builder, "}\n\nload_global_proc_addresses :: (vk_get_instance_proc_addr: *void) {\n    vkGetInstanceProcAddr = xx vk_get_instance_proc_addr;\n\n");
+    append(*builder, "}\n\nload_global_proc_addresses :: () {\n\n");
 
     for loader_funcs {
         write_func_variable_assignment_loader(*builder, it, "    ");
