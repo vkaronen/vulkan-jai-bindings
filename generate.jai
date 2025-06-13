@@ -319,14 +319,14 @@ get_sType_default_value_from_struct_name :: (name: string) -> string {
 
                 // Here we check a bunch of special cases where a number should be after a letter without an underscore.
                 skip_underscore := false;
-                skip_underscore |= slice(name, i-1, 3) == "H26"; // Special case for H264 and H265
-                skip_underscore |= slice(name, i-2, 2) == "AV"; // AV1
+                skip_underscore ||= slice(name, i-1, 3) == "H26"; // Special case for H264 and H265
+                skip_underscore ||= slice(name, i-2, 2) == "AV"; // AV1
                 if i >= 4 {
-                    skip_underscore |= slice(name, i-4, 4) == "loat" && name[i] != "2"; // Bfloat and Float, but not float 2 features
-                    skip_underscore |= slice(name, i-4, 4) == "Uint";
-                    skip_underscore |= slice(name, i-3, 5) == "Win32";
+                    skip_underscore ||= slice(name, i-4, 4) == "loat" && name[i] != "2"; // Bfloat and Float, but not float 2 features
+                    skip_underscore ||= slice(name, i-4, 4) == "Uint";
+                    skip_underscore ||= slice(name, i-3, 5) == "Win32";
                 }
-                skip_underscore |= slice(name, i-3, 3) == "Int";
+                skip_underscore ||= slice(name, i-3, 3) == "Int";
                 if !skip_underscore {
                     append(*builder, #char "_");
                 }
