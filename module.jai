@@ -13,6 +13,7 @@ VK_TRUE:                   VkBool32: 1;
 VK_FALSE:                  VkBool32: 0;
 
 VK_WHOLE_SIZE:             u64: xx ~0;
+VK_SHADER_UNUSED_KHR::    ~cast(u32)0;
 VK_ATTACHMENT_UNUSED:      u32: 0xffff_ffff;
 VK_QUEUE_FAMILY_IGNORED:   u32: 0xffff_ffff;
 VK_REMAINING_ARRAY_LAYERS: u32: 0xffff_ffff;

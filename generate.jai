@@ -105,6 +105,7 @@ MACOS_ARGS :: string.[
 OMIT_LIST :: string.[
     // These are defined manually:
     "VK_NULL_HANDLE",
+    "VK_SHADER_UNUSED_KHR",
     "VK_TRUE",
     "VK_FALSE",
     "VK_WHOLE_SIZE",
@@ -233,7 +234,7 @@ vulkan_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration
     // Replace typedef which has "VkFlags" as value. :VkFlags
     // VkAccessFlags :: VkFlags   ->   VkAccessFlags :: VkAccessFlagBits;
     // We don't change the name of the FlagBits enum directly because both the ...FlagBits and the ...Flags aliases are used in declarations.
-    if decl.kind == .TYPEDEF && decl.type.type_of_typedef &&  decl.type.type_of_typedef.name == "VkFlags" {
+    if decl.kind == .TYPEDEF && decl.type.type_of_typedef && decl.type.type_of_typedef.name == "VkFlags"  {
         //print("TYPEDEF(VkFlags):%\n", << decl.name);
         flags_name := replace(decl.name, "Flags", "FlagBits");
         enum_decl, found := table_find(*available_flag_bits, flags_name);

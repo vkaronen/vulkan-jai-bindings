@@ -896,7 +896,7 @@ VK_NV_ray_tracing :: 1;
 
 VK_NV_RAY_TRACING_SPEC_VERSION :: 3;
 VK_NV_RAY_TRACING_EXTENSION_NAME :: "VK_NV_ray_tracing";
-VK_SHADER_UNUSED_KHR :: ~0;
+
 VK_SHADER_UNUSED_NV :: VK_SHADER_UNUSED_KHR;
 
 VK_NV_representative_fragment_test :: 1;
